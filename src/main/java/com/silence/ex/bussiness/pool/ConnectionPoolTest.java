@@ -1,5 +1,7 @@
 package com.silence.ex.bussiness.pool;
 
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -43,9 +45,27 @@ public class ConnectionPoolTest {
             } catch (InterruptedException e) {
             }
             while (count > 0) {
+                try {
+                    //从连接池中获取连接
+                    Connection connection = pool.fetchConnection(1000);
+                    if (connection != null){
+                        try {
+                            connection.createStatement();
+                            connection.commit();
+                        } finally {
+                            pool.releaseConnection(connection);
+                            got.incrementAndGet();
+                        }
+                    }else {
+                        notGot.incrementAndGet();
+                    }
+                } catch (Exception e) {
 
+                }finally {
+                    count--;
+                }
             }
-
+            end.countDown();
         }
     }
 }
