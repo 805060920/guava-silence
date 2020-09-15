@@ -1,6 +1,9 @@
 package com.silence.ex.bussiness.pool;
 
+import org.checkerframework.checker.units.qual.A;
+
 import java.sql.Connection;
+import java.sql.SQLException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -18,24 +21,6 @@ public class ConnectionPoolTest {
 
     //main线程在所有线程执行完毕之后重新开始执行
     static CountDownLatch end;
-
-    public static void main(String[] args) throws InterruptedException {
-        int threadCount = 10;
-        end = new CountDownLatch(threadCount);
-        int count = 20;
-        AtomicInteger got = new AtomicInteger();
-        AtomicInteger notGot = new AtomicInteger();
-        for (int i = 0; i < threadCount; i++) {
-            Thread thread = new Thread(new ConnectionRunner(count, got, notGot),
-                    "ConnectionRunnerThread");
-            thread.start();
-        }
-        start.countDown();
-        end.await();
-        System.out.println("total invoke: " + (threadCount * count));
-        System.out.println("got connection: " + got);
-        System.out.println("not got connection " + notGot);
-    }
 
     static class ConnectionRunner implements Runnable {
 
@@ -57,10 +42,9 @@ public class ConnectionPoolTest {
             }
             while (count > 0) {
                 try {
-                    // 从线程池中获取连接，如果1000ms内无法获取到，将会返回null
-                    // 分别统计连接获取的数量got和未获取到的数量notGot
+                    //从连接池中获取连接
                     Connection connection = pool.fetchConnection(1000);
-                    if (connection != null) {
+                    if (connection != null){
                         try {
                             connection.createStatement();
                             connection.commit();
@@ -68,15 +52,36 @@ public class ConnectionPoolTest {
                             pool.releaseConnection(connection);
                             got.incrementAndGet();
                         }
-                    } else {
+                    }else {
                         notGot.incrementAndGet();
                     }
-                } catch (Exception ex) {
-                } finally {
+                } catch (Exception e) {
+
+                }finally {
                     count--;
                 }
             }
             end.countDown();
         }
     }
+
+    public static void main(String[] args) throws InterruptedException {
+        //线程数量
+        int threadCount = 10;
+        end = new CountDownLatch(threadCount);
+        int count = 20;
+        AtomicInteger got = new AtomicInteger();
+        AtomicInteger notGot = new AtomicInteger();
+        for(int i = 0; i < threadCount; i++) {
+            Thread thread = new Thread(new ConnectionRunner(count, got, notGot)
+                    , "ConnectionRunnerThread");
+            thread.start();
+        }
+        start.countDown();
+        end.await();
+        System.out.println("total invoke: " + (threadCount * count));
+        System.out.println("got connection: " + got);
+        System.out.println("not got connection " + notGot);
+    }
+
 }
