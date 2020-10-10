@@ -1,4 +1,4 @@
-package com.silence.ex.bussiness;
+package com.silence.ex.bussiness.thread;
 
 /**
  * @auth yang
